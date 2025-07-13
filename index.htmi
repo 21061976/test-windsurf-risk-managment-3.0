@@ -1223,6 +1223,15 @@
             <h2 class="upload-title">העלה מסמך</h2>
             <p class="upload-subtitle">גרור קובץ לכאן או לחץ לבחירה</p>
             <input type="file" id="fileInput" accept=".docx,.pdf,.txt" style="display: none;" onchange="handleFileUpload(event)">
+div style="margin: 20px 0;">
+  <label for="aiEngineSelect" style="font-weight:bold;">בחר מנוע AI:</label>
+  <select id="aiEngineSelect" style="padding:8px; border-radius:8px;">
+    <option value="claude">Claude</option>
+    <option value="openai">OpenAI GPT</option>
+    <option value="gemini">Google Gemini</option>
+    <option value="copilot">Azure Copilot</option>
+  </select>
+</div>
             <button class="upload-button">בחר קובץ</button>
             <div style="margin-top: 20px; color: #7f8c8d; font-size: 0.9em;">
                 <small>תומך ב: Word (.docx), PDF, טקסט (.txt) - עד 16MB</small>
@@ -2079,7 +2088,59 @@
             console.log('🏗️ מחולל דוחות ניהול סיכונים הופעל בהצלחה!');
         }
 
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', init);// שליחת קובץ לשרת Flask וקבלת דוח AI
+function analyzeFileWithAI(file, aiEngine) {
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('ai_engine', aiEngine);
+
+    // הצג שלב עיבוד
+    document.getElementById('uploadStep').style.display = 'none';
+    document.getElementById('processingStep').style.display = 'block';
+    document.getElementById('progressFill').style.width = '20%';
+
+    fetch('http://localhost:5001/api/analyze', {
+        method: 'POST',
+        body: formData
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        document.getElementById('progressFill').style.width = '100%';
+        if (data.error) {
+            alert('שגיאה: ' + data.error);
+            document.getElementById('processingStep').style.display = 'none';
+            document.getElementById('uploadStep').style.display = 'block';
+        } else {
+            renderReportFromJson(data);
+            document.getElementById('processingStep').style.display = 'none';
+            document.getElementById('reportStep').classList.add('active');
+        }
+    })
+    .catch(err => {
+        alert('שגיאת רשת: ' + err);
+        document.getElementById('processingStep').style.display = 'none';
+        document.getElementById('uploadStep').style.display = 'block';
+    });
+}
+
+// מאזין לבחירת קובץ ומפעיל שליחה ל-AI
+document.getElementById('fileInput').addEventListener('change', function(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+
+    var aiEngineSelect = document.getElementById('aiEngineSelect');
+    var aiEngine = aiEngineSelect ? aiEngineSelect.value : 'claude';
+
+    analyzeFileWithAI(file, aiEngine);
+});
+
+// פונקציה שמציגה את שם הפרויקט בדוח (תוכל להרחיב להצגת כל הדוח)
+function renderReportFromJson(data) {
+    if (data.project && data.project.name) {
+        document.getElementById('reportTitle').innerText = data.project.name;
+    }
+    // כאן תוכל להמשיך למלא שדות נוספים בדוח לפי הצורך
+}
     </script>
 </body>
 </html>
